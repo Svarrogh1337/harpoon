@@ -25,8 +25,8 @@ func AttachUProbe(binPath, functionSymbol string, probe *bpf.BPFProg) (uint32, e
 // Since the uretprobes doesn't work well with Go binaries,
 // I preferred to create an abstraction to attach a uprobe ∀ RET instruction withing the traced function,
 // instead of attachin a single uretprobe.
-func AttachURETProbe(binPath, functionSymbol string, probe *bpf.BPFProg, offset uint32) error {
-	functionRetOffsets, err := elfreader.GetFunctionRetOffsets(binPath, functionSymbol)
+func AttachURETProbe(binPath, functionSymbol string, probe *bpf.BPFProg, offset uint32, arch string) error {
+	functionRetOffsets, err := elfreader.GetFunctionRetOffsets(binPath, functionSymbol, arch)
 	if err != nil {
 		return fmt.Errorf("error finding function (%s) RET offsets: %v", functionSymbol, err)
 	}

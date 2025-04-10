@@ -33,6 +33,7 @@ var save bool
 var directory string
 var filename string
 var dumpInterval int
+var arch string
 
 // captureCmd represents the create args
 var captureCmd = &cobra.Command{
@@ -50,6 +51,7 @@ by passing the function name symbol and the binary args.
 			CommandError:  commandError,
 			LibbpfOutput:  libbpfOutput,
 			Interval:      dumpInterval,
+			Arch:          arch,
 		}
 
 		saveOpts := writer.WriteOptions{
@@ -107,5 +109,6 @@ func init() {
 	captureCmd.Flags().StringVarP(&filename, "name", "n", "", "Specify a name for the saved output")
 	captureCmd.Flags().StringVarP(&directory, "directory", "D", "", "Store saved files in a directory")
 	captureCmd.Flags().IntVarP(&dumpInterval, "dump-interval", "i", 0, "Dump results every interval of time")
+	captureCmd.Flags().StringVarP(&arch, "arch", "A", "", "Architecture of the binary")
 	captureCmd.MarkFlagsRequiredTogether("save", "directory")
 }

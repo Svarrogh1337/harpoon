@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"debug/elf"
 	"fmt"
-
+	"golang.org/x/arch/arm64/arm64asm"
 	"golang.org/x/arch/x86/x86asm"
 )
 
@@ -12,7 +12,7 @@ import (
 // where RET instruction appear within the function.
 // This code was taken from here:
 // https://github.com/cfc4n/go_uretprobe_demo/blob/master/ret_offset.go#L22
-func GetFunctionRetOffsets(elfFile string, fnName string) ([]uint64, error) {
+func GetFunctionRetOffsets(elfFile string, fnName string, arch string) ([]uint64, error) {
 	var goSymbs []elf.Symbol
 	var goElf *elf.File
 	goElf, err := elf.Open(elfFile)
@@ -51,7 +51,7 @@ func GetFunctionRetOffsets(elfFile string, fnName string) ([]uint64, error) {
 
 	instHex := elfText[start:end]
 	var offsets []uint64
-	offsets, err = decodeInstruction(instHex)
+	offsets, err = decodeInstruction(instHex, arch)
 	if err != nil {
 		return nil, fmt.Errorf("error decoding instruction: %v", err)
 	}
@@ -61,10 +61,33 @@ func GetFunctionRetOffsets(elfFile string, fnName string) ([]uint64, error) {
 
 	return offsets, nil
 }
+func isNotNullArm64(slice []byte) bool {
+	for _, b := range slice {
+		if b != 0x00 {
+			return true
+		}
+	}
+	fmt.Printf("Warning: udf instruction detected\n")
+	return false
+}
+func decodeInstruction(instHex []byte, arch string) ([]uint64, error) {
+	var offsets []uint64
+	switch arch {
+	case "amd64":
+		offsets, err := decodeInstructionAmd64(instHex)
+		return offsets, err
+	case "arm64":
+		offsets, err := decodeInstructionArm64(instHex)
+		return offsets, err
+	default:
+		return offsets, fmt.Errorf("unknown architecture")
+	}
+}
 
 // this code was taken from here:
 // https://github.com/cfc4n/go_uretprobe_demo/blob/master/ret_offset.go#L70C1-L91C2
-func decodeInstruction(instHex []byte) ([]uint64, error) {
+
+func decodeInstructionAmd64(instHex []byte) ([]uint64, error) {
 	var offsets []uint64
 	s := bytes.NewBufferString("")
 	for i := 0; i < len(instHex); {
@@ -79,6 +102,20 @@ func decodeInstruction(instHex []byte) ([]uint64, error) {
 		}
 		i += inst.Len
 	}
+	return offsets, nil
+}
 
+func decodeInstructionArm64(instHex []byte) ([]uint64, error) {
+	var offsets []uint64
+	s := bytes.NewBufferString("")
+	for i := 0; i < len(instHex); {
+		inst, err := arm64asm.Decode(instHex[i:])
+		if err != nil && isNotNullArm64(instHex[i:i+4]) {
+			return nil, err
+		}
+		s.WriteString(fmt.Sprintf("%04X\t%s", i, inst.Op.String()))
+		s.WriteString("\n")
+		i += 4
+	}
 	return offsets, nil
 }

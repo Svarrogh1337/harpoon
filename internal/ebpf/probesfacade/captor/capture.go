@@ -36,6 +36,7 @@ type CaptureOptions struct {
 	CommandError  bool
 	LibbpfOutput  bool
 	Interval      int
+	Arch          string
 }
 
 type EbpfSetup struct {
